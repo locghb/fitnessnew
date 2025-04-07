@@ -11,14 +11,14 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { resetPassword } from "../../lib/auth";
+import { sendOTP } from "../../lib/auth";
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleResetPassword = async () => {
+  const handleSendOTP = async () => {
     if (!email) {
       Alert.alert("Lỗi", "Vui lòng nhập email của bạn");
       return;
@@ -27,24 +27,18 @@ export default function ForgotPasswordScreen() {
     setIsLoading(true);
 
     try {
-      const result = await resetPassword(email);
+      const result = await sendOTP(email);
 
       if (result.success) {
-        Alert.alert(
-          "Thành công",
-          "Link đặt lại mật khẩu đã được gửi đến email của bạn",
-          [
-            {
-              text: "OK",
-              onPress: () => router.back(),
-            },
-          ]
-        );
+        router.push({
+          pathname: "/otp-verification",
+          params: { email }
+        });
       } else {
-        Alert.alert("Lỗi", "Không thể gửi link đặt lại mật khẩu. Vui lòng thử lại.");
+        Alert.alert("Lỗi", "Không thể gửi mã OTP. Vui lòng thử lại.");
       }
     } catch (error) {
-      console.error("Error resetting password:", error);
+      console.error("Error sending OTP:", error);
       Alert.alert("Lỗi", "Đã xảy ra lỗi. Vui lòng thử lại.");
     } finally {
       setIsLoading(false);
@@ -68,7 +62,7 @@ export default function ForgotPasswordScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Quên mật khẩu?</Text>
           <Text style={styles.subtitle}>
-            Nhập email của bạn để nhận link đặt lại mật khẩu
+            Nhập email của bạn để nhận mã xác thực
           </Text>
         </View>
 
@@ -87,13 +81,13 @@ export default function ForgotPasswordScreen() {
 
           <TouchableOpacity
             style={styles.resetButton}
-            onPress={handleResetPassword}
+            onPress={handleSendOTP}
             disabled={isLoading}
           >
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.resetButtonText}>Đặt lại mật khẩu</Text>
+              <Text style={styles.resetButtonText}>Gửi mã xác thực</Text>
             )}
           </TouchableOpacity>
         </View>

@@ -17,9 +17,11 @@ export interface SignInData {
   password: string
 }
 
+// Lưu trữ OTP tạm thời (trong thực tế nên lưu vào database)
+const otpStore = new Map<string, { otp: string; expiry: number }>();
+
 export async function signUp(data: SignUpData) {
   try {
-    // Đăng ký user với Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
@@ -27,7 +29,6 @@ export async function signUp(data: SignUpData) {
 
     if (authError) throw authError
 
-    // Tạo profile cho user
     const { error: profileError } = await supabase
       .from('users')
       .insert({
@@ -40,7 +41,7 @@ export async function signUp(data: SignUpData) {
         weight: data.weight,
         goal_weight: data.goalWeight,
         goal_type: data.goalType,
-        daily_calorie_goal: 2000, // Giá trị mặc định, có thể tính toán sau
+        daily_calorie_goal: 2000,
       })
 
     if (profileError) throw profileError
@@ -79,17 +80,6 @@ export async function signOut() {
   }
 }
 
-export async function resetPassword(email: string) {
-  try {
-    const { error } = await supabase.auth.resetPasswordForEmail(email)
-    if (error) throw error
-    return { success: true }
-  } catch (error) {
-    console.error('Error resetting password:', error)
-    return { success: false, error }
-  }
-}
-
 export async function getCurrentUser() {
   try {
     const { data, error } = await supabase.auth.getUser()
@@ -98,5 +88,58 @@ export async function getCurrentUser() {
   } catch (error) {
     console.error('Error getting current user:', error)
     return { success: false, error }
+  }
+}
+
+// Hàm tạo và gửi OTP
+export async function sendOTP(email: string) {
+  try {
+    // Gửi email với OTP
+    const { data, error } = await supabase.auth.signInWithOtp({
+      email: email,
+      options: {
+        shouldCreateUser: false // Không tạo user mới nếu chưa tồn tại
+      }
+    });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending OTP:', error);
+    return { success: false, error };
+  }
+}
+
+// Hàm xác thực OTP
+export async function verifyOTP(email: string, token: string) {
+  try {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: email,
+      token: token,
+      type: 'email'
+    });
+
+    if (error) throw error;
+
+    return { success: true, session: data.session };
+  } catch (error) {
+    console.error('Error verifying OTP:', error);
+    return { success: false, error };
+  }
+}
+
+export async function updateUserPassword(newPassword: string) {
+  try {
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) throw error;
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error updating user password:', error);
+    return { success: false, error };
   }
 }
